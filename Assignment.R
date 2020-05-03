@@ -56,12 +56,6 @@ df <- full_join(cbind(site="PAY", ReadTSeries(file.path(datapath, "PAY.csv"))),
 ## Converting to long form
 lf <- melt(df, id.vars=c("site", "datetime", "season", "year", "month", "day", "hour", "dayofwk", "daytype"))
 
-## data frame of only pollutants
-lf_pollutants <- filter(lf, variable == "O3" | variable == "SO2" | variable == "NO2" | variable == "CO" | variable == "PM10" | variable == "PM2.5")
-
-
-limits <- data.frame(variable = c("CO", "NO2", "O3", "PM10", "PM2.5", "SO2"), Z = c(8, 80, 120, 50, 50, 100)) #set pollutant limit values
-
 ###Plot All Variables#####
 ggp <- ggplot(lf)+                                   # `lf` is the data frame
   facet_grid(variable~site, scale="free_y")+         # panels created out of these variables
@@ -70,14 +64,49 @@ ggp <- ggplot(lf)+                                   # `lf` is the data frame
   theme(axis.text.x=element_text(angle=30, hjust=1)) # rotate x-axis labels
 print(ggp)                                           # view the plot                                         
 
+## data frame of only pollutants wiht annual limit values
+lf_24hpollutants <- filter(lf, variable == "SO2" | variable == "NO2" | variable == "CO" | variable == "PM10")
+
+lf_24hpollutants$datetime <- as.Date(lf_24hpollutants$datetime, "%m/%d/%Y")
+ag <- lf_24hpollutants %>% 
+  group_by(site,variable,datetime) %>%
+  summarise(mean(value, na.rm = TRUE)) %>%
+  rename("mean_value" = "mean(value, na.rm = TRUE)")
+
+limits_24h <- data.frame(variable = c("CO", "NO2", "PM10", "SO2"), Z = c(8, 80, 50, 100)) #set pollutant limit values
+
 ###Plot Pollutant Variables#####
-ggp_pollutants <- ggplot(lf_pollutants)+             # `lf` is the data frame
+ggp_pollutants <- ggplot(ag)+             # `lf` is the data frame
+  facet_grid(variable~site, scale="free_y")+         # panels created out of these variables
+  geom_line(aes(datetime, mean_value, color=site))+       # plot `value` vs. `time` as lines
+  scale_x_chron()+                                   # format x-axis labels (time units)
+  theme(axis.text.x=element_text(angle=30, hjust=1))+# rotate x-axis labels
+  xlab("Date") +                                     #setting x label
+  ylab("Pollutant Concentrations [??g/m^3] except CO in [mg/m^3]") +                 #setting y label
+  geom_hline(data = limits_24h, aes(yintercept = Z), color = "red", linetype = "dashed") #add limit values to graphs
+print(ggp_pollutants) 
+
+lf_ozone <- filter(lf, variable == "O3")
+
+limits_h_ozone <- data.frame(variable = c("O3"), Z = c(120)) #set pollutant limit values
+
+###Plot Pollutant Variables#####
+ggp_ozone <- ggplot(lf_ozone)+             # `lf` is the data frame
   facet_grid(variable~site, scale="free_y")+         # panels created out of these variables
   geom_line(aes(datetime, value, color=site))+       # plot `value` vs. `time` as lines
   scale_x_chron()+                                   # format x-axis labels (time units)
   theme(axis.text.x=element_text(angle=30, hjust=1))+# rotate x-axis labels
-  geom_hline(data = limits, aes(yintercept = Z), color = "red", linetype = "dashed") #add limit values to graphs
-print(ggp_pollutants)  
+  xlab("Date") +                                     #setting x label
+  ylab("Pollutant Concentrations [??g/m^3]") +                 #setting y label
+  geom_hline(data = limits_h_ozone, aes(yintercept = Z), color = "red", linetype = "dashed") #add limit values to graphs
+print(ggp_ozone)
+
+### Annual mean of all variables
+annual_mean<-lf %>% 
+  group_by(site,variable) %>%
+  #summarize(mean_CO=mean(variable == "CO"),mean_NO2=mean(variable == "NO2"),mean_O3=mean(variable == "O3"), mean_PM10=mean(variable == "PM10"),mean_PM2.5=mean(variable == "PM2.5"),mean_SO2=mean(variable == "SO2"))
+  summarize(mean(value, na.rm = TRUE))
+print(annual_mean)
 
   
 
