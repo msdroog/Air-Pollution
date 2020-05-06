@@ -112,7 +112,7 @@ print("Data is cleaned. Cleaned data is safed as 'lf'.",quote=FALSE)
 
 ### END DATA CLEANING
 #----------------------
-
+##(2) Concentrations vs limit values
 
 ###Plot All Variables#####
 ggp <- ggplot(lf)+                                   # `lf` is the data frame
@@ -201,3 +201,53 @@ seasonal_prec <- lf %>% filter(!is.na(value) & variable=="PREC") %>%
   do(ComputeCumSum(.[["value"]]))
 #write.table(seasonal_prec, "c:/Users/corin/Documents/Uni/MA/EPFL/MA-2/Air Pollution/Assignment/seasonal-prec.txt", sep="\t",dec = ".")
 
+#--------------------
+## (4) Diurnal DIFFERENCES
+
+Percentile <- function(perc) function(x) 
+  ## `perc` is the percentile which should be computed for the numeric vector `x`
+  quantile(x, perc*1e-2, na.rm=TRUE)
+
+##Payerne overall analysis
+ggp <- ggplot(data=lf %>% filter(site=="PAY" & !is.na(value)),
+              mapping=aes(x=hour, y=value, group=daytype, color=daytype)) +
+  facet_grid(variable ~ season, scale = "free_y", drop=TRUE) +
+  geom_line(stat="summary", fun="median")+
+  geom_errorbar(stat="summary",
+                fun.min=Percentile(25),
+                fun.max=Percentile(75))+
+  ggtitle("PAY")
+print(ggp)
+
+##Sion overall analysis
+ggp <- ggplot(data=lf %>% filter(site=="SIO" & !is.na(value)),
+              mapping=aes(x=hour, y=value, group=daytype, color=daytype)) +
+  facet_grid(variable ~ season, scale = "free_y", drop=TRUE) +
+  geom_line(stat="summary", fun="median")+
+  geom_errorbar(stat="summary",
+                fun.min=Percentile(25),
+                fun.max=Percentile(75))+
+  ggtitle("SIO")
+print(ggp)
+
+##Ozone
+
+ggp <- ggplot(data=lf %>% filter(variable=="O3"),
+              mapping=aes(x=hour, y=value, group=daytype, color=daytype)) +
+  facet_grid(site ~ season, drop=TRUE) +
+  geom_line(stat="summary", fun="median")+
+  geom_errorbar(stat="summary",
+                fun.min=Percentile(25),
+                fun.max=Percentile(75))+
+  ggtitle("O3")
+print(ggp)
+
+ggp <- ggplot(data=lf %>% filter(variable=="NO2"),
+              mapping=aes(x=hour, y=value, group=site, color=site)) +
+  facet_grid(season ~ dayofwk, drop=TRUE) +
+  geom_line(stat="summary", fun="median")+
+  geom_errorbar(stat="summary",
+                fun.min=Percentile(25),
+                fun.max=Percentile(75))+
+  ggtitle("NO2")
+print(ggp)
