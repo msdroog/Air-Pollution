@@ -2,6 +2,8 @@ library(dplyr)
 library(reshape2)
 library(chron)
 library(ggplot2)
+library(gridExtra)
+library(xlsx)
 
 setwd("C:/Users/droog/Documents/Documents/EPFL/S2/APCC")
 getwd()
@@ -14,6 +16,33 @@ options(chron.year.abb=FALSE)
 theme_set(theme_bw()) # just my preference for plots
 
 
+#--------------------
+# DEFINE FUNCTIONS
+
+
+ComputeMean <- function(x) {
+  ## x is a vector of values
+  stats <- c("mean"    = mean(x,na.rm=TRUE))
+  data.frame(stat=factor(names(stats), names(stats)), value=stats)
+}
+
+ComputeSD <- function(x) {
+  ## x is a vector of values
+  stats <- c("sd"    = sd(x,na.rm=TRUE))
+  data.frame(stat=factor(names(stats), names(stats)), value=stats)
+}
+
+ComputeMax <- function(x) {
+  ## x is a vector of values
+  stats <- c("max"    = max(x,na.rm=TRUE))
+  data.frame(stat=factor(names(stats), names(stats)), value=stats)
+}
+
+ComputeCumSum <- function(x) {
+  ## x is a vector of values
+  stats <- c("sum"    = sum(x,na.rm=TRUE))
+  data.frame(stat=factor(names(stats), names(stats)), value=stats)
+}
 Month2Season <- function(month) {
   ## month is an integer (1-12)
   ## a factor with levels {"DJF", "MAM", "JJA", "SON"} is returned
@@ -46,6 +75,10 @@ ReadTSeries <- function(filename, timecolumn="datetime", timeformat="%d.%m.%Y %H
   data
 }
 
+#--------------------
+### LOAD DATA
+
+
 datapath <- file.path("data")
 
 df <- full_join(cbind(site="PAY", ReadTSeries(file.path(datapath, "PAY.csv"))),
@@ -55,6 +88,31 @@ df <- full_join(cbind(site="PAY", ReadTSeries(file.path(datapath, "PAY.csv"))),
 
 ## Converting to long form
 lf <- melt(df, id.vars=c("site", "datetime", "season", "year", "month", "day", "hour", "dayofwk", "daytype"))
+
+
+#----------------------
+### START DATA CLEANING
+
+
+## Check which are negative
+negatives <- lf %>% filter(!is.na(value) & value<0 & variable!="TEMP") %>% group_by(site, variable) # temperature is allowed to be negative
+print("The following values are negative: ",quote=FALSE)
+print(negatives)
+
+# Take out NA values
+lf_notCleaned <- lf
+lf <- lf %>% filter(!is.na(value)) %>% group_by(site, variable)
+
+# Find Maxima to check whether they make sense
+maxima <- lf %>% group_by(site, variable) %>%
+  do(ComputeMax(.[["value"]]))
+# comment: all make sense, no change necessary
+
+print("Data is cleaned. Cleaned data is safed as 'lf'.",quote=FALSE)
+
+### END DATA CLEANING
+#----------------------
+
 
 ###Plot All Variables#####
 ggp <- ggplot(lf)+                                   # `lf` is the data frame
@@ -109,4 +167,37 @@ annual_mean<-lf %>%
 print(annual_mean)
 
   
+#--------------------
+## (3) SEASONAL DIFFERENCES
+
+
+# Plot All Variables BY MONTH 
+ggp <- ggplot(lf) +
+  facet_grid(variable ~ site, scale = "free_y") +
+  geom_boxplot(aes(month, value), outlier.size = 0.5, outlier.shape = 3)
+print(ggp)
+
+# Plot Seasons Boxplot
+ggp1 <- ggplot(lf %>% filter( variable!="PREC" & variable!="EC" & variable!="NOX")) +
+  facet_grid(variable ~ site, scale = "free_y") +
+  geom_boxplot(aes(season, value), outlier.size = 0.5, outlier.shape = 3)
+print(ggp1)
+
+# Plot Seasonal Precipitation
+ggp2 <- ggplot(lf %>% filter(variable=="PREC")) +
+  facet_grid(variable ~ site, scale = "free_y") +
+  geom_bar(aes(season, value), stat="sum", show.legend = FALSE) 
+print(ggp2)
+grid.arrange(ggp1, ggp2)   # library 'gridExtra' needed
+
+# Compute seasonal means
+seasonal_means <- lf %>% filter(!is.na(value) & variable!="PREC" & variable!="EC" & variable!="NOX") %>%
+  group_by(site, season, variable) %>%
+  do(ComputeMean(.[["value"]]))
+#write.xlsx(seasonal_means, "c:/Users/corin/Documents/Uni/MA/EPFL/MA-2/Air Pollution/Assignment/seasonal-means.xlsx")   # library 'xlsx' needed
+#write.table(seasonal_means, "c:/Users/corin/Documents/Uni/MA/EPFL/MA-2/Air Pollution/Assignment/seasonal-means.txt", sep="\t",dec = ",")
+seasonal_prec <- lf %>% filter(!is.na(value) & variable=="PREC") %>%
+  group_by(site, season,variable) %>%
+  do(ComputeCumSum(.[["value"]]))
+#write.table(seasonal_prec, "c:/Users/corin/Documents/Uni/MA/EPFL/MA-2/Air Pollution/Assignment/seasonal-prec.txt", sep="\t",dec = ".")
 
