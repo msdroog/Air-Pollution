@@ -231,7 +231,6 @@ ggp <- ggplot(data=lf %>% filter(site=="SIO" & !is.na(value)),
 print(ggp)
 
 ##Ozone
-
 ggp <- ggplot(data=lf %>% filter(variable=="O3"),
               mapping=aes(x=hour, y=value, group=daytype, color=daytype)) +
   facet_grid(site ~ season, drop=TRUE) +
@@ -242,12 +241,101 @@ ggp <- ggplot(data=lf %>% filter(variable=="O3"),
   ggtitle("O3")
 print(ggp)
 
+##NO2
 ggp <- ggplot(data=lf %>% filter(variable=="NO2"),
+              mapping=aes(x=hour, y=value, group=daytype, color=daytype)) +
+  facet_grid(site ~ season, drop=TRUE) +
+  geom_line(stat="summary", fun="median")+
+  geom_errorbar(stat="summary",
+                fun.min=Percentile(25),
+                fun.max=Percentile(75))+
+  ggtitle("NO2")
+print(ggp)
+
+##SO2
+ggp <- ggplot(data=lf %>% filter(variable=="SO2"),
+              mapping=aes(x=hour, y=value, group=daytype, color=daytype)) +
+  facet_grid(site ~ season, drop=TRUE) +
+  geom_line(stat="summary", fun="median")+
+  geom_errorbar(stat="summary",
+                fun.min=Percentile(25),
+                fun.max=Percentile(75))+
+  ggtitle("SO2")
+print(ggp)
+
+##CO
+ggp <- ggplot(data=lf %>% filter(variable=="CO"),
+              mapping=aes(x=hour, y=value, group=daytype, color=daytype)) +
+  facet_grid(site ~ season, drop=TRUE) +
+  geom_line(stat="summary", fun="median")+
+  geom_errorbar(stat="summary",
+                fun.min=Percentile(25),
+                fun.max=Percentile(75))+
+  ggtitle("CO")
+print(ggp)
+
+##PM10
+ggp <- ggplot(data=lf %>% filter(variable=="PM10"),
+              mapping=aes(x=hour, y=value, group=daytype, color=daytype)) +
+  facet_grid(site ~ season, drop=TRUE) +
+  geom_line(stat="summary", fun="median")+
+  geom_errorbar(stat="summary",
+                fun.min=Percentile(25),
+                fun.max=Percentile(75))+
+  ggtitle("PM10")
+print(ggp)
+
+##PM2.5
+ggp <- ggplot(data=lf %>% filter(variable=="PM2.5"),
+          mapping=aes(x=hour, y=value, group=daytype, color=daytype)) +
+  facet_grid(site ~ season, drop=TRUE) +
+  geom_line(stat="summary", fun="median")+
+  geom_errorbar(stat="summary",
+                fun.min=Percentile(25),
+                fun.max=Percentile(75))+
+  ggtitle("PM2.5")
+print(ggp)
+
+##NOx
+ggp <- ggplot(data=lf %>% filter(variable=="NOX"),
+              mapping=aes(x=hour, y=value, group=daytype, color=daytype)) +
+  facet_grid(site ~ season, drop=TRUE) +
+  geom_line(stat="summary", fun="median")+
+  geom_errorbar(stat="summary",
+                fun.min=Percentile(25),
+                fun.max=Percentile(75))+
+  ggtitle("NOx")
+print(ggp)
+
+##PREC
+ggp <- ggplot(data=lf %>% filter(variable=="PREC"),
               mapping=aes(x=hour, y=value, group=site, color=site)) +
   facet_grid(season ~ dayofwk, drop=TRUE) +
   geom_line(stat="summary", fun="median")+
   geom_errorbar(stat="summary",
                 fun.min=Percentile(25),
                 fun.max=Percentile(75))+
-  ggtitle("NO2")
+  ggtitle("Prec")
+print(ggp)
+
+##EC
+ggp <- ggplot(data=lf %>% filter(variable=="EC"),
+              mapping=aes(x=hour, y=value, group=daytype, color=daytype)) +
+  facet_grid(site ~ season, drop=TRUE) +
+  geom_line(stat="summary", fun="median")+
+  geom_errorbar(stat="summary",
+                fun.min=Percentile(25),
+                fun.max=Percentile(75))+
+  ggtitle("EC")
+print(ggp)
+
+##PM10-daily
+ggp <- ggplot(data=lf %>% filter(variable=="PM10"),
+              mapping=aes(x=hour, y=value, group=site, color=site)) +
+  facet_grid(season ~ dayofwk, drop=TRUE) +
+  geom_line(stat="summary", fun="median")+
+  geom_errorbar(stat="summary",
+                fun.min=Percentile(25),
+                fun.max=Percentile(75))+
+  ggtitle("PM10")
 print(ggp)
