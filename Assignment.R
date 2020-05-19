@@ -339,3 +339,53 @@ ggp <- ggplot(data=lf %>% filter(variable=="PM10"),
                 fun.max=Percentile(75))+
   ggtitle("PM10")
 print(ggp)
+
+#--------------------
+## (6) Correlations
+###SIMPLE
+dm <- lf %>% group_by(site, year, month, day, season, variable) %>%
+  summarize(value=max(value, na.rm=TRUE))
+daily.max <- dcast(dm, site + year + month + day + season ~ variable)
+rm(dm) # no longer needed
+##Ozone-Temp
+ggp <- ggplot(daily.max)+
+  facet_grid(site~season)+
+  geom_point(aes(TEMP, O3))
+print(ggp)
+
+###LATTICE
+library(lattice)
+
+#PAY
+CorrelationValue <- function(x, y, ...) {
+  i <- is.finite(x) & is.finite(y) 
+  correlation <- cor(x[i], y[i]) 
+  if(is.finite(correlation)) {
+    cpl <- current.panel.limits()
+    panel.text(mean(cpl$xlim),mean(cpl$ylim),
+               bquote(italic(r)==.(sprintf("%.2f",correlation))),
+               adj=c(0.5,0.5),col="blue")
+  }
+}
+ix <- grepl("PAY", daily.max[["site"]], fixed=TRUE)
+spp <- splom(~daily.max[ix,c("O3","NO2","CO","PM10","TEMP","PREC","RAD")] | daily.max[ix,"season"],
+             upper.panel = CorrelationValue,
+             pch=4)
+print(spp)
+
+#SIO
+CorrelationValue <- function(x, y, ...) {
+  i <- is.finite(x) & is.finite(y) 
+  correlation <- cor(x[i], y[i]) 
+  if(is.finite(correlation)) {
+    cpl <- current.panel.limits()
+    panel.text(mean(cpl$xlim),mean(cpl$ylim),
+               bquote(italic(r)==.(sprintf("%.2f",correlation))),
+               adj=c(0.5,0.5),col="blue")
+  }
+}
+ix <- grepl("SIO", daily.max[["site"]], fixed=TRUE)
+spp <- splom(~daily.max[ix,c("O3","NO2","PM10","TEMP","PREC","RAD")] | daily.max[ix,"season"],
+             upper.panel = CorrelationValue,
+             pch=4)
+print(spp)
