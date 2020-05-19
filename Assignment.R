@@ -75,6 +75,33 @@ ReadTSeries <- function(filename, timecolumn="datetime", timeformat="%d.%m.%Y %H
   data
 }
 
+ComputeStats <- function(x) {
+  x <- na.omit(x)
+  m <- mean(x)
+  s <- sd(x)
+  n <- length(x)
+  t <- qt(.975, n - 1)
+  data.frame(mean=m,
+             conf.lower=m-t*s/sqrt(n),
+             conf.upper=m+t*s/sqrt(n),
+             sd.lower=m-s,
+             sd.upper=m+s)
+}
+
+TTest <- function(value, daytype) {
+  ## if all values are missing,
+  ##   the t-test will raise an error
+  wkend <- value[daytype=="Weekend"]
+  wkday <- value[daytype=="Weekday"]
+  if(length(na.omit(wkend)) > 0 & length(na.omit(wkday)) > 0) {
+    out <- t.test(wkend, wkday, alternative="two.sided")
+    pval <- out[["p.value"]]
+  } else {
+    pval <- NA
+  }
+  pval
+}
+
 #--------------------
 ### LOAD DATA
 
@@ -338,6 +365,119 @@ ggp <- ggplot(data=lf %>% filter(variable=="PM10"),
                 fun.min=Percentile(25),
                 fun.max=Percentile(75))+
   ggtitle("PM10")
+print(ggp)
+
+
+#--------------------
+## (5) WEEKDAY-WEEKEND MEANS
+
+##Payerne overall analysis
+table <- lf %>% filter(site=="PAY" & !variable %in% c("EC", "NOx"))
+mystats <- table %>%
+  group_by(variable, season, daytype) %>%
+  do(ComputeStats(.[["value"]]))
+ggp <- ggplot(mystats)+
+  facet_grid(variable ~ season, scale = "free_y", drop=TRUE) +
+  geom_bar(aes(x=daytype, y=mean, fill=daytype),
+           stat="identity")+
+  geom_errorbar(aes(x=daytype,
+                    ymin=conf.lower,
+                    ymax=conf.upper),
+                width=0.1)+
+  ggtitle("PAY")
+print(ggp)
+
+##Sion overall analysis
+table <- lf %>% filter(site=="SIO" & !variable %in% c("EC", "NOx"))
+mystats <- table %>%
+  group_by(variable, season, daytype) %>%
+  do(ComputeStats(.[["value"]]))
+ggp <- ggplot(mystats)+
+  facet_grid(variable ~ season, scale = "free_y", drop=TRUE) +
+  geom_bar(aes(x=daytype, y=mean, fill=daytype),
+           stat="identity")+
+  geom_errorbar(aes(x=daytype,
+                    ymin=conf.lower,
+                    ymax=conf.upper),
+                width=0.1)+
+  ggtitle("SIO")
+print(ggp)
+
+
+## T-STAT
+
+#If the p-value is less than alpha=0.05, we can say that we would reject the null hypothesis
+#(that on average, the weekend concentrations are the same as weekday concentrations) at the 5% significance level.
+
+# if p is over  0.05 --> weekday and weekend are similar (no significant difference)
+# if p is under 0.05 --> weekday and weekend are different
+
+# for Pollutants
+pvals <- lf %>%
+  filter(!variable %in% c("EC", "NOX", "TEMP", "PREC", "RAD")) %>%
+  group_by(site, season, variable) %>%
+  summarize(p.value = TTest(value, daytype))
+ggplot(pvals) + 
+  facet_grid(site ~ season) +
+  geom_point(aes(variable, p.value), shape=3, color=4)+
+  geom_hline(yintercept = .05, linetype = 2) +
+  #scale_y_log10() + 
+  theme(axis.text.x = element_text(angle=45, hjust=1))+
+  labs(x="", y="p-value")
+#size(800:400)
+
+# for meteorological values
+pvals <- lf %>%
+  filter(variable %in% c("TEMP", "PREC", "RAD")) %>%
+  group_by(site, season, variable) %>%
+  summarize(p.value = TTest(value, daytype))
+ggplot(pvals) +
+  facet_grid(site ~ season) +
+  geom_point(aes(variable, p.value), shape=3, color=4)+
+  geom_hline(yintercept = .05, linetype = 2) +
+  #scale_y_log10() + 
+  theme(axis.text.x = element_text(angle=45, hjust=1))+
+  labs(x="", y="p-value")
+
+##Ozone
+table <- lf %>% filter(variable=="O3")
+mystats <- table %>%
+  group_by(site, season, daytype) %>%
+  do(ComputeStats(.[["value"]]))
+ggp <- ggplot(mystats) +
+  facet_grid(site ~ season, drop=TRUE) +
+  geom_bar(aes(x=daytype, y=mean, fill=daytype),
+           stat="identity")+
+  geom_errorbar(aes(x=daytype,
+                    ymin=conf.lower,
+                    ymax=conf.upper),
+                width=0.1)+
+  ggtitle("O3")
+print(ggp)
+# corresponding T-statistics for PAY in spring
+# (because there the p-value is not clearly visible in the graph)
+(out <- t.test(filter(table, site=="PAY" & season=="MAM" & daytype=="Weekend")[["value"]],
+               filter(table, site=="PAY" & season=="MAM" & daytype=="Weekday")[["value"]],
+               alternative="greater"))
+out[["p.value"]]
+
+pvals <- lf %>%
+  filter(variable=="O3") %>%
+  group_by(site, season) %>%
+  summarize(p.value = TTest(value, daytype))
+print(pvals)
+#weekly periodicity
+ggp <- ggplot(data=lf %>% filter(variable=="O3"),
+              #mapping=aes(x=dayofwk, y=value, group=site, color=site)) +
+              mapping=aes(x=dayofwk, y=value)) +
+  #facet_grid(~ season, drop=TRUE) +
+  #geom_line(stat="summary", fun="median")+
+  # geom_errorbar(stat="summary",
+  #              fun.min=Percentile(25),
+  #             fun.max=Percentile(75))+
+  facet_grid( site ~ season, scale = "free_y") +
+  geom_boxplot(aes(dayofwk, value), outlier.size = 0.5, outlier.shape = 3)
+ggtitle("O3")
 print(ggp)
 
 #--------------------
