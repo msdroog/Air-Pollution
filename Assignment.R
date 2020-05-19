@@ -4,6 +4,7 @@ library(chron)
 library(ggplot2)
 library(gridExtra)
 library(xlsx)
+library(fitdistrplus)
 
 setwd("C:/Users/droog/Documents/Documents/EPFL/S2/APCC")
 getwd()
@@ -100,6 +101,39 @@ TTest <- function(value, daytype) {
     pval <- NA
   }
   pval
+}
+ReplaceNonpositive <- function(x) {
+  x <- na.omit(x)
+  min.positive.value <- min(x[x>0])/2
+  replace(x, x < min.positive.value, min.positive.value)
+}
+fit_stat <- function(data,location,substance) {
+  hourly <- data %>% filter(site==location & month=="Jul" & variable==substance)
+  concvec <- c(na.omit(hourly[["value"]]))
+  fit <- fitdist(ReplaceNonpositive(concvec), "lnorm")
+  print(fit)
+  print(gofstat(fit))            # Goodness Of Fit
+  print("p-value: ",quote=FALSE) # Xi^2 statistics
+  pval.h <- gofstat(fit)[["chisqpvalue"]]
+  print(pval.h)
+  # plot statistics
+  png_name <- sprintf("q7_%s_%s.png", location, substance) # give filename to png
+  w <- 800 # [pixel] define width of plot
+  h <- 800 # [pixel] define height of plot
+  PlotPNG(fit,png_name,w,h)
+  return(pval.h)
+}
+PlotPNG <- function(myplot,png_name,w,h){
+  png(filename = png_name, 
+      width = w, height = h, units = "px",
+      bg = "white")
+  plot(myplot)
+  dev.off()
+}
+AddRow <- function(all_pval,location,substance,pval){
+  row_val <- data.frame( location , substance , pval )
+  names(row_val) <- c("site", "variable","p_value")
+  return(rbind(all_pval, row_val))
 }
 
 #--------------------
@@ -629,3 +663,28 @@ ggp <- ggplot(cor.values)+
   scale_y_continuous(limits=c(-1,1))+
   facet_grid(.~site)
 print(ggp)
+
+#--------------------
+## (7) LOG-NORMAL DISTRIBUTION
+
+# create output table for p-values
+all_pval  <-data.frame(site=character(),variable=character(),p_value=double(), stringsAsFactors=FALSE) # defining the column names
+all_pval # print in console
+
+
+# PAY
+location   <- "PAY"
+substances <- c( "O3", "NO2", "CO","SO2", "PM10", "PM2.5","EC","NOX")
+for (val in substances) {
+  all_pval <- AddRow(all_pval,location,val,fit_stat(lf,location,val))
+}
+print(all_pval)
+
+
+# SIO
+location   <- "SIO"
+substances <- c( "O3", "NO2", "PM10", "PM2.5","NOX")
+for (val in substances) {
+  all_pval <- AddRow(all_pval,location,val,fit_stat(lf,location,val))
+}
+print(all_pval)
