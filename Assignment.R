@@ -342,16 +342,11 @@ print(ggp)
 
 #--------------------
 ## (6) Correlations
-###SIMPLE
+
 dm <- lf %>% group_by(site, year, month, day, season, variable) %>%
   summarize(value=max(value, na.rm=TRUE))
 daily.max <- dcast(dm, site + year + month + day + season ~ variable)
-rm(dm) # no longer needed
-##Ozone-Temp
-ggp <- ggplot(daily.max)+
-  facet_grid(site~season)+
-  geom_point(aes(TEMP, O3))
-print(ggp)
+rm(dm)
 
 ###LATTICE
 library(lattice)
@@ -389,3 +384,108 @@ spp <- splom(~daily.max[ix,c("O3","NO2","PM10","TEMP","PREC","RAD")] | daily.max
              upper.panel = CorrelationValue,
              pch=4)
 print(spp)
+
+###Ozone-Temp
+#Plot
+ggp <- ggplot(daily.max)+
+  facet_grid(site~season)+
+  geom_point(aes(TEMP, O3))
+print(ggp)
+#Correlation value
+(cor.values <- daily.max %>% group_by(site, season) %>%
+    summarize(correlation=cor(TEMP, O3, use="pairwise.complete.obs")))
+ggp <- ggplot(cor.values)+
+  geom_bar(aes(season, correlation), stat="identity")+
+  scale_y_continuous(limits=c(0,1))+
+  facet_grid(.~site)
+print(ggp)
+
+###Ozone-Rad
+#Plot
+ggp <- ggplot(daily.max)+
+  facet_grid(site~season)+
+  geom_point(aes(RAD, O3))
+print(ggp)
+#Correlation value
+(cor.values <- daily.max %>% group_by(site, season) %>%
+    summarize(correlation=cor(RAD, O3, use="pairwise.complete.obs")))
+ggp <- ggplot(cor.values)+
+  geom_bar(aes(season, correlation), stat="identity")+
+  scale_y_continuous(limits=c(0,1))+
+  facet_grid(.~site)
+print(ggp)
+
+###Temp-Rad
+#Plot
+ggp <- ggplot(daily.max)+
+  facet_grid(site~season)+
+  geom_point(aes(RAD, TEMP))
+print(ggp)
+#Correlation value
+(cor.values <- daily.max %>% group_by(site, season) %>%
+    summarize(correlation=cor(RAD, TEMP, use="pairwise.complete.obs")))
+ggp <- ggplot(cor.values)+
+  geom_bar(aes(season, correlation), stat="identity")+
+  scale_y_continuous(limits=c(0,1))+
+  facet_grid(.~site)
+print(ggp)
+
+###PM10-Ozone
+#Plot
+ggp <- ggplot(daily.max)+
+  facet_grid(site~season)+
+  geom_point(aes(PM10, O3))
+print(ggp)
+#Correlation value
+(cor.values <- daily.max %>% group_by(site, season) %>%
+    summarize(correlation=cor(PM10, O3, use="pairwise.complete.obs")))
+ggp <- ggplot(cor.values)+
+  geom_bar(aes(season, correlation), stat="identity")+
+  scale_y_continuous(limits=c(-1,1))+
+  facet_grid(.~site)
+print(ggp)
+
+###Temp-PM10
+#Plot
+ggp <- ggplot(daily.max)+
+  facet_grid(site~season)+
+  geom_point(aes(PM10, TEMP))
+print(ggp)
+#Correlation value
+(cor.values <- daily.max %>% group_by(site, season) %>%
+    summarize(correlation=cor(PM10, TEMP, use="pairwise.complete.obs")))
+ggp <- ggplot(cor.values)+
+  geom_bar(aes(season, correlation), stat="identity")+
+  scale_y_continuous(limits=c(-1,1))+
+  facet_grid(.~site)
+print(ggp)
+
+###NO2-PM10
+#Plot
+ggp <- ggplot(daily.max)+
+  facet_grid(site~season)+
+  geom_point(aes(PM10, NO2))
+print(ggp)
+#Correlation value
+(cor.values <- daily.max %>% group_by(site, season) %>%
+    summarize(correlation=cor(PM10, NO2, use="pairwise.complete.obs")))
+ggp <- ggplot(cor.values)+
+  geom_bar(aes(season, correlation), stat="identity")+
+  scale_y_continuous(limits=c(0,1))+
+  facet_grid(.~site)
+print(ggp)
+
+###NO2-Ozone
+#Plot
+ggp <- ggplot(daily.max)+
+  facet_grid(site~season)+
+  geom_point(aes(O3, NO2))
+print(ggp)
+#Correlation value
+(cor.values <- daily.max %>% group_by(site, season) %>%
+    summarize(correlation=cor(O3, NO2, use="pairwise.complete.obs")))
+ggp <- ggplot(cor.values)+
+  geom_bar(aes(season, correlation), stat="identity")+
+  scale_y_continuous(limits=c(-1,1))+
+  facet_grid(.~site)
+print(ggp)
