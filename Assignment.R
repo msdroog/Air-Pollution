@@ -664,6 +664,14 @@ ggp <- ggplot(cor.values)+
   facet_grid(.~site)
 print(ggp)
 
+##Lagged PAY Rad -> Ozone
+ix <- df[["site"]]=="PAY"
+ccf(df[ix,"RAD"], df[ix,"O3"], lag.max=6, na.action=na.pass)
+
+##Lagged PAY Rad -> Temp
+ix <- df[["site"]]=="PAY"
+ccf(df[ix,"RAD"], df[ix,"TEMP"], lag.max=6, na.action=na.pass)
+
 #--------------------
 ## (7) LOG-NORMAL DISTRIBUTION
 
