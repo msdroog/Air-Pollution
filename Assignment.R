@@ -696,3 +696,98 @@ for (val in substances) {
   all_pval <- AddRow(all_pval,location,val,fit_stat(lf,location,val))
 }
 print(all_pval)
+
+#--------------------
+## (8) Anomalies
+#select unusual pollutant and place
+NO2.sio <- filter(lf, site=="SIO" & variable=="NO2")
+NO2.sio[["date"]] <- format(dates(NO2.sio[["datetime"]]), "y.m.d")
+NO2.sio[["day"]] <- as.numeric(as.character(NO2.sio[["day"]]))
+tail(NO2.sio)
+tail(NO2.sio.wind)
+
+#Time series
+ggp <- ggplot(mutate(NO2.sio, day.of.month=day+hour/24))+
+  geom_line(aes(day.of.month, value))+
+  facet_grid(.~month)+
+  xlab("Day")+
+  ylab(expression("NO"[2]~"concentration"~(mu*g/m^3)))
+print(ggp)
+
+#daily means during year
+daily <- NO2.sio %>%
+  group_by(date, variable) %>%
+  summarize(month=month[1],
+            day=day[1],
+            value=mean(value,na.rm=TRUE))
+ggp <- ggplot(daily)+
+  geom_line(aes(day, value))+
+  facet_grid(.~month)+
+  xlab("Day")+
+  ylab(expression("NO"[2]~"concentration"~(mu*g/m^3)))
+print(ggp)
+
+#daily menas PDF
+ggp <- ggplot(daily)+
+  geom_line(aes(x=value), stat="density", position="identity")+
+  geom_point(aes(x=value), y=0, shape=4)+
+  geom_vline(xintercept=80, linetype=2)+
+  xlab(expression("Daily Mean NO"[2]~"concentration"~(mu*g/m^3)))+
+  ylab("Probability density")
+print(ggp)
+
+#concentration was greater than 120 ??g/m3
+(highvals <- filter(NO2.sio, value >120))
+highdays <- filter(NO2.sio, date %in% highvals[["date"]])
+ggp <- ggplot(highdays, aes(hour, value))+
+  geom_line()+
+  geom_point()+
+  facet_grid(.~date)+
+  xlab("Hour of day")+
+  ylab(expression("NO"[2]~"concentration"~(mu*g/m^3)))
+print(ggp)
+#mean daily
+highdays %>% group_by(date, variable) %>%
+  summarize(value=mean(value))
+
+#add wind to data
+ReadMet <- function(filename) {
+  data <- read.table(filename, skip=15, col.names=c("year", "month", "day", "hour", "minute", "WIGE", "WIRI"))
+  data %>%
+    mutate(datetime = as.chron(paste(year, month, day, hour, minute), "%Y %m %d %H %M"),
+           year     = years(datetime),
+           month    = months(datetime),
+           day      = days(datetime),
+           hour     = hours(datetime),
+           minute   = minutes(datetime),
+           WIGE     = ifelse(WIGE <= -9999, NA, WIGE),
+           WIRI     = ifelse(WIRI <= -9999, NA, WIRI))
+}
+datapath <- file.path("data")
+met <- ReadMet(file.path(datapath, "SIO_Wind_MM10_19.txt"))
+# wind speed and direction
+color <- hsv(seq(0, 360) / 360, 1, 1)
+angle <- seq(0, 360, 60)
+met_dec <- filter(met, month == "Dec" & minute== "0")
+ggp2 <- ggplot(met_dec, aes(hour, value))+
+  geom_line(aes(hour, WIGE), color="gray")+
+  geom_point(aes(hour, WIGE, color=WIRI))+
+  scale_color_gradientn(colors = color, breaks=angle, limits=range(angle), expand=c(0, 0))+
+  facet_wrap(.~day)+
+  ylab("WIGE")
+print(ggp2)
+
+#multivariable correlation
+NO2.sio.DJF <- filter(lf, site=="SIO" & season=="DJF")
+variables <- c("O3", "NO2", "PM10","PM2.5","NOX", "TEMP", "PREC", "RAD")
+lf <- melt(NO2.sio.DJF, measure.vars=variables)
+dm <- lf %>% group_by(site, year, month, day, season, variable) %>%
+  summarize(value=max(value, na.rm=TRUE))
+daily.max <- dcast(dm, site + year + month + day + season ~ variable)
+lf <- melt(daily.max, measure.vars=setdiff(variables, "NO2"))
+ggp <- ggplot(lf)+
+  facet_grid(.~variable, scale="free_x")+
+  geom_point(aes(NO2, value), shape=4)
+print(ggp)
+(cor.values <- lf %>% group_by(variable) %>%
+    summarize(correlation=cor(NO2, value, use="pairwise.complete.obs")))
