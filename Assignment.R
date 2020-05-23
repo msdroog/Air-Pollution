@@ -703,8 +703,6 @@ print(all_pval)
 NO2.sio <- filter(lf, site=="SIO" & variable=="NO2")
 NO2.sio[["date"]] <- format(dates(NO2.sio[["datetime"]]), "y.m.d")
 NO2.sio[["day"]] <- as.numeric(as.character(NO2.sio[["day"]]))
-tail(NO2.sio)
-tail(NO2.sio.wind)
 
 #Time series
 ggp <- ggplot(mutate(NO2.sio, day.of.month=day+hour/24))+
@@ -727,7 +725,7 @@ ggp <- ggplot(daily)+
   ylab(expression("NO"[2]~"concentration"~(mu*g/m^3)))
 print(ggp)
 
-#daily menas PDF
+#daily means PDF
 ggp <- ggplot(daily)+
   geom_line(aes(x=value), stat="density", position="identity")+
   geom_point(aes(x=value), y=0, shape=4)+
@@ -736,8 +734,18 @@ ggp <- ggplot(daily)+
   ylab("Probability density")
 print(ggp)
 
-#concentration was greater than 120 ??g/m3
-(highvals <- filter(NO2.sio, value >120))
+#hourly PDF
+ggp <- ggplot(NO2.sio)+
+  geom_line(aes(x=value), stat="density", position="identity")+
+  geom_point(aes(x=value), y=0, shape=4)+
+  geom_vline(xintercept=120, linetype=2)+
+  xlab(expression("Hourly NO"[2]~"concentration"~(mu*g/m^3)))+
+  ylab("Probability density")
+print(ggp)
+
+
+#concentration was greater than 125 ??g/m3
+(highvals <- filter(NO2.sio, value >125))
 highdays <- filter(NO2.sio, date %in% highvals[["date"]])
 ggp <- ggplot(highdays, aes(hour, value))+
   geom_line()+
