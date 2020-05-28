@@ -672,6 +672,10 @@ ccf(df[ix,"RAD"], df[ix,"O3"], lag.max=6, na.action=na.pass)
 ix <- df[["site"]]=="PAY"
 ccf(df[ix,"RAD"], df[ix,"TEMP"], lag.max=6, na.action=na.pass)
 
+##Lagged PAY Ozone -> NO2
+ix <- df[["site"]]=="PAY"
+ccf(df[ix,"O3"], df[ix,"NO2"], lag.max=6, na.action=na.pass)
+
 #--------------------
 ## (7) LOG-NORMAL DISTRIBUTION
 
